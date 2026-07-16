@@ -1529,15 +1529,21 @@
       "jsr:@publicdomainrelay/compute-provider-common@0.0.0": {},
       "jsr:@publicdomainrelay/compute-provider-digitalocean@0.0.0": {
         "dependencies": [
+          "jsr:@publicdomainrelay/atproto-helpers@0",
           "jsr:@publicdomainrelay/compute-provider-abc@0",
           "jsr:@publicdomainrelay/oidc-issuer-hono@0",
+          "jsr:@publicdomainrelay/serve@0",
           "npm:yaml@^2.7.0"
         ]
       },
       "jsr:@publicdomainrelay/compute-provider-local@0.0.0": {
         "dependencies": [
+          "jsr:@publicdomainrelay/atproto-helpers@0",
           "jsr:@publicdomainrelay/compute-provider-abc@0",
+          "jsr:@publicdomainrelay/hono-factory-package-registry@0",
           "jsr:@publicdomainrelay/oidc-issuer-hono@0",
+          "jsr:@publicdomainrelay/package-store-local-fs@0",
+          "jsr:@publicdomainrelay/serve@0",
           "npm:yaml@^2.7.0"
         ]
       },
@@ -1869,6 +1875,7 @@
       },
       "jsr:@publicdomainrelay/oidc-issuer-hono@0.0.0": {
         "dependencies": [
+          "jsr:@publicdomainrelay/logger@0.2",
           "jsr:@publicdomainrelay/oidc-issuer-abc@0",
           "jsr:@publicdomainrelay/rbac-atproto@0",
           "npm:hono@4",

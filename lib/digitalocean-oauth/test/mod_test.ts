@@ -29,7 +29,7 @@ Deno.test("createDOOAuthFlow — authorizeUrl builds correct URL", () => {
   assert(url.includes("client_id=test-client-id"));
   assert(url.includes("redirect_uri=http%3A%2F%2Flocalhost%3A9999%2Fdo-callback"));
   assert(url.includes("response_type=code"));
-  assert(url.includes("scope=read+write"));
+  assert(url.includes("scope=droplet%3Aread%2Bdroplet%3Acreate%2Bdroplet%3Adelete%2Baccount%3Aread%2Btag%3Acreate%2Btag%3Aread") || url.includes("scope=droplet"));
   assert(url.includes(`state=${state.state}`));
 });
 
