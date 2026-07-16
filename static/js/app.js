@@ -207,9 +207,10 @@ function renderPolicyMode(policyMode) {
   if (!el) return;
 
   const modes = [
-    { value: "only_me", label: "Only me", desc: "Only accept RFPs from your own ATProto identity" },
-    { value: "direct_network", label: "Direct network", desc: "Accept RFPs from identities in your direct ATProto network" },
-    { value: "policy_based", label: "Policy-based", desc: "Accept RFPs based on RBAC allowlist policies" },
+    { value: "only-me", label: "Only me", desc: "Only accept RFPs from your own ATProto identity" },
+    { value: "tangled-vouch", label: "Tangled vouch", desc: "Accept RFPs from identities vouched in the tangled network" },
+    { value: "mutuals", label: "Mutuals", desc: "Accept RFPs from mutual ATProto connections" },
+    { value: "dynamic", label: "Dynamic", desc: "Accept RFPs based on dynamic policy evaluation" },
   ];
 
   el.innerHTML = `
@@ -232,7 +233,7 @@ function renderPolicyMode(policyMode) {
         state.policyMode = val;
       } catch (err) {
         alert(`Failed to update policy: ${err.message}`);
-        select.value = state.policyMode || "only_me";
+        select.value = state.policyMode || "only-me";
       }
     });
   }

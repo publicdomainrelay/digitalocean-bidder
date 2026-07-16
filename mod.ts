@@ -140,13 +140,14 @@ const sessionSecret = await loadOrCreateSecret("sessionSecret", generateSessionS
 
 // ── Policy mode ────────────────────────────────────────────────────────────
 
-const POLICY_MODES = ["only_me", "direct_network", "policy_based"] as const;
-type PolicyMode = typeof POLICY_MODES[number];
+import { isValidPolicyMode, type PolicyMode, POLICY_MODES } from "@publicdomainrelay/market-policy-abc";
 
 async function getPolicyMode(): Promise<PolicyMode> {
   const stored = await db.getServerConfig("policyMode");
-  if (stored && POLICY_MODES.includes(stored as PolicyMode)) return stored as PolicyMode;
-  return (options.policyMode as PolicyMode) || "only_me";
+  if (isValidPolicyMode(stored)) return stored;
+  const fromOpts = options.policyMode as string | undefined;
+  if (isValidPolicyMode(fromOpts)) return fromOpts;
+  return "only-me";
 }
 
 async function setPolicyMode(mode: PolicyMode): Promise<void> {
@@ -549,7 +550,7 @@ bidderServe.app.post("/api/policy", async (c) => {
   let body: Record<string, unknown> = {};
   try { body = await c.req.json() as Record<string, unknown>; } catch { /* ignore */ }
   const mode = body.policyMode as string;
-  if (!mode || !POLICY_MODES.includes(mode as PolicyMode)) {
+  if (!isValidPolicyMode(mode)) {
     return c.json({ error: `Invalid policy mode. Must be one of: ${POLICY_MODES.join(", ")}` }, 400);
   }
   await setPolicyMode(mode as PolicyMode);
