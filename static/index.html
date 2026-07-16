@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigitalOcean Bidder</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div id="app">
+  <!-- Login screen (default) -->
+  <main id="login-screen" class="app-shell">
+    <div class="card">
+      <h1>&#9889; DigitalOcean Bidder</h1>
+      <p class="subtitle">Authenticate with both providers to start bidding</p>
+
+      <div class="provider" id="atp-section">
+        <h2>AT Protocol (Bluesky)</h2>
+        <div class="status" id="atp-status">
+          <span class="badge badge-pending">Pending</span>
+        </div>
+        <div id="atp-actions">
+          <a href="/auth/atproto/login" class="btn btn-primary">Login with Bluesky</a>
+        </div>
+        <div class="error hidden" id="atp-error"></div>
+      </div>
+
+      <div class="provider" id="do-section">
+        <h2>DigitalOcean</h2>
+        <div class="status" id="do-status">
+          <span class="badge badge-pending">Pending</span>
+        </div>
+        <div id="do-actions">
+          <a href="/auth/digitalocean/login" class="btn btn-green">Login with DigitalOcean</a>
+        </div>
+        <div class="error hidden" id="do-error"></div>
+      </div>
+
+      <div class="provider">
+        <button class="btn btn-accent btn-block hidden" id="start-bidder-btn" disabled>
+          Start Bidder
+        </button>
+        <div class="status hidden" id="start-status"></div>
+      </div>
+    </div>
+
+    <nav class="footer-nav">
+      <span>Serve: <code id="serve-url">—</code></span>
+    </nav>
+  </main>
+
+  <!-- Dashboard (shown after bidders running) -->
+  <main id="dashboard-screen" class="app-shell hidden">
+    <header class="dash-header">
+      <h1>&#9889; DigitalOcean Bidder</h1>
+      <span class="text-muted" id="serve-url-dash">—</span>
+    </header>
+
+    <div class="dash-grid">
+      <!-- Bidders panel -->
+      <div class="card" id="bidders-panel">
+        <h2>Account Pairs</h2>
+        <div id="bidders-list"></div>
+      </div>
+
+      <!-- VMs panel -->
+      <div class="card" id="vms-panel">
+        <h2>Active VMs <span class="badge badge-active" id="vm-count">0</span></h2>
+        <div id="vms-list">
+          <p class="text-muted">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contracts table -->
+    <div class="card" id="contracts-panel">
+      <h2>Contract History</h2>
+      <table id="contracts-table">
+        <thead>
+          <tr>
+            <th>VM ID</th>
+            <th>Requester</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="contracts-body">
+          <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+        </tbody>
+      </table>
+      <div id="contracts-pager" class="pager hidden">
+        <button class="btn btn-outline btn-sm" id="prev-page" disabled>&larr; Newer</button>
+        <span id="page-info"></span>
+        <button class="btn btn-outline btn-sm" id="next-page" disabled>Older &rarr;</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

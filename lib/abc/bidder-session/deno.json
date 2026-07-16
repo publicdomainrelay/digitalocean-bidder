@@ -1,0 +1,9 @@
+{
+  "name": "@publicdomainrelay/bidder-session-abc",
+  "version": "0.0.0",
+  "license": "Unlicense",
+  "exports": "./mod.ts",
+  "imports": {
+    "@publicdomainrelay/bidder-session-common": "jsr:@publicdomainrelay/bidder-session-common@^0"
+  }
+}

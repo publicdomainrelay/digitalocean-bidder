@@ -1,0 +1,165 @@
+{
+  "name": "digitalocean-bidder",
+  "description": "DigitalOcean compute provider bidder with ATProto + DO OAuth",
+  "options": {
+    "atproto-handle": {
+      "type": "string",
+      "description": "Bluesky/AT Protocol handle for OAuth authentication",
+      "env": "ATP_HANDLE"
+    },
+    "atproto-oauth": {
+      "type": "boolean",
+      "description": "Use ATProto loopback OAuth (opens browser)"
+    },
+    "atproto-oauth-qr": {
+      "type": "boolean",
+      "description": "Use ATProto QR-based OAuth session transfer"
+    },
+    "oauth-client-id": {
+      "type": "string",
+      "description": "ATProto OAuth client ID (URL to client-metadata.json)",
+      "env": "OAUTH_CLIENT_ID",
+      "default": "http://localhost"
+    },
+    "oauth-redirect-uri": {
+      "type": "string",
+      "description": "ATProto OAuth redirect URI for loopback callback",
+      "env": "OAUTH_REDIRECT_URI",
+      "default": "http://127.0.0.1:0/callback"
+    },
+    "oauth-session-file": {
+      "type": "string",
+      "description": "ATProto OAuth session file (QR-based flow)",
+      "env": "OAUTH_SESSION_FILE"
+    },
+    "oauth-session-path": {
+      "type": "string",
+      "description": "Path for ATProto OAuth session persistence",
+      "env": "OAUTH_SESSION_PATH"
+    },
+    "do-oauth-client-id": {
+      "type": "string",
+      "description": "DigitalOcean OAuth application client ID",
+      "env": "DO_OAUTH_CLIENT_ID"
+    },
+    "do-oauth-client-secret": {
+      "type": "string",
+      "description": "DigitalOcean OAuth application client secret",
+      "env": "DO_OAUTH_CLIENT_SECRET"
+    },
+    "do-oauth-redirect-uri": {
+      "type": "string",
+      "description": "DO OAuth redirect URI for loopback callback",
+      "env": "DO_OAUTH_REDIRECT_URI",
+      "default": "http://127.0.0.1:0/do-callback"
+    },
+    "do-token-store": {
+      "type": "string",
+      "description": "DO token storage backend: file, sqlite, or postgres",
+      "env": "DO_TOKEN_STORE",
+      "default": "file"
+    },
+    "do-token-store-path": {
+      "type": "string",
+      "description": "Directory for file-based DO token storage",
+      "env": "DO_TOKEN_STORE_PATH"
+    },
+    "do-sqlite-path": {
+      "type": "string",
+      "description": "SQLite database path for DO token storage",
+      "env": "DO_SQLITE_PATH"
+    },
+    "do-postgres-uri": {
+      "type": "string",
+      "description": "PostgreSQL connection string for DO token storage",
+      "env": "DO_POSTGRES_URI"
+    },
+    "db-path": {
+      "type": "string",
+      "description": "PGlite data directory path (default: ./data/pgdata)",
+      "env": "DB_PATH",
+      "default": "./data/pgdata"
+    },
+    "db-uri": {
+      "type": "string",
+      "description": "PostgreSQL connection string — if set, uses real PG instead of PGlite",
+      "env": "DATABASE_URI"
+    },
+    "refresh-interval-sec": {
+      "type": "number",
+      "description": "Token refresh interval in seconds (default: 300 = 5 min)",
+      "env": "REFRESH_INTERVAL_SEC",
+      "default": 300
+    },
+    "ingress-proxy-host": {
+      "type": "string",
+      "description": "XRPC relay dispatcher host:port",
+      "env": "INGRESS_PROXY_HOST",
+      "default": "xrpc.fedproxy.com"
+    },
+    "no-ingress-proxy": {
+      "type": "boolean",
+      "description": "Disable XRPC relay (direct connections)"
+    },
+    "relay-url": {
+      "type": "string",
+      "description": "AT Protocol relay URL for firehose subscription",
+      "env": "RELAY_URL"
+    },
+    "firehose-mode": {
+      "type": "string",
+      "description": "Firehose mode: off, subscriberepos, jetstream",
+      "env": "FIREHOSE_MODE",
+      "default": "off"
+    },
+    "firehose-url": {
+      "type": "string",
+      "description": "Firehose relay URL (comma-separated for multiple)",
+      "env": "FIREHOSE_URL"
+    },
+    "skip-qr": {
+      "type": "boolean",
+      "description": "Skip QR code association flow (assume prior association exists)"
+    },
+    "public-origin": {
+      "type": "string",
+      "description": "Public origin URL for OAuth metadata and callbacks (e.g. https://digitalocean.socialweb.computer)",
+      "env": "PUBLIC_ORIGIN"
+    },
+    "serve-addr": {
+      "type": "string",
+      "description": "TCP listen address",
+      "env": "SERVE_ADDR",
+      "default": "0.0.0.0"
+    },
+    "serve-port": {
+      "type": "number",
+      "description": "TCP listen port (0 = random)",
+      "env": "SERVE_PORT",
+      "default": 0
+    },
+    "policy-mode": {
+      "type": "string",
+      "description": "Market policy mode for RFP filtering",
+      "env": "POLICY_MODE"
+    },
+    "offering-refresh-sec": {
+      "type": "number",
+      "description": "Offering re-commit interval in seconds",
+      "env": "OFFERING_REFRESH_SEC",
+      "default": 300
+    },
+    "plc-directory-url": {
+      "type": "string",
+      "description": "PLC directory URL",
+      "env": "PLC_DIRECTORY_URL",
+      "default": "https://plc.directory"
+    },
+    "compute-provider-do-base-url": {
+      "type": "string",
+      "description": "DigitalOcean API base URL",
+      "env": "COMPUTE_PROVIDER_DO_BASE_URL",
+      "default": "https://api.digitalocean.com"
+    }
+  }
+}

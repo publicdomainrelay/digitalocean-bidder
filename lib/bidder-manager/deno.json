@@ -1,0 +1,20 @@
+{
+  "name": "@publicdomainrelay/bidder-manager",
+  "version": "0.0.0",
+  "license": "Unlicense",
+  "exports": "./mod.ts",
+  "imports": {
+    "@publicdomainrelay/bidder-db-abc": "jsr:@publicdomainrelay/bidder-db-abc@^0",
+    "@publicdomainrelay/bidder-manager-abc": "jsr:@publicdomainrelay/bidder-manager-abc@^0",
+    "@publicdomainrelay/logger": "jsr:@publicdomainrelay/logger@^0",
+    "@publicdomainrelay/serve": "jsr:@publicdomainrelay/serve@^0",
+    "@publicdomainrelay/did-key-ingress-proxy": "jsr:@publicdomainrelay/did-key-ingress-proxy@^0",
+    "@publicdomainrelay/market-bidder": "jsr:@publicdomainrelay/market-bidder@^0",
+    "@publicdomainrelay/market-bidder-abc": "jsr:@publicdomainrelay/market-bidder-abc@^0",
+    "@publicdomainrelay/market-bidder-compute": "jsr:@publicdomainrelay/market-bidder-compute@^0",
+    "@publicdomainrelay/compute-provider-abc": "jsr:@publicdomainrelay/compute-provider-abc@^0",
+    "@publicdomainrelay/compute-provider-digitalocean": "jsr:@publicdomainrelay/compute-provider-digitalocean@^0",
+    "@publicdomainrelay/event-bus": "jsr:@publicdomainrelay/event-bus@^0",
+    "@atproto/crypto": "npm:@atproto/crypto@^0.4.4"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@publicdomainrelay/bidder-session-jwt",
+  "version": "0.0.0",
+  "license": "Unlicense",
+  "exports": "./mod.ts",
+  "imports": {
+    "@publicdomainrelay/bidder-session-common": "jsr:@publicdomainrelay/bidder-session-common@^0",
+    "@publicdomainrelay/bidder-session-abc": "jsr:@publicdomainrelay/bidder-session-abc@^0"
+  }
+}

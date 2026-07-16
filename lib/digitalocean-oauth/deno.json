@@ -1,0 +1,11 @@
+{
+  "name": "@publicdomainrelay/digitalocean-oauth",
+  "version": "0.0.0",
+  "license": "Unlicense",
+  "exports": "./mod.ts",
+  "imports": {
+    "@publicdomainrelay/digitalocean-oauth-common": "jsr:@publicdomainrelay/digitalocean-oauth-common@^0",
+    "@publicdomainrelay/digitalocean-oauth-abc": "jsr:@publicdomainrelay/digitalocean-oauth-abc@^0",
+    "@publicdomainrelay/logger": "jsr:@publicdomainrelay/logger@^0"
+  }
+}

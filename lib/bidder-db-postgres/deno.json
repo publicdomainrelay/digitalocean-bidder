@@ -1,0 +1,10 @@
+{
+  "name": "@publicdomainrelay/bidder-db-postgres",
+  "version": "0.0.0",
+  "license": "Unlicense",
+  "exports": "./mod.ts",
+  "imports": {
+    "@publicdomainrelay/bidder-db-common": "jsr:@publicdomainrelay/bidder-db-common@^0",
+    "@publicdomainrelay/bidder-db-abc": "jsr:@publicdomainrelay/bidder-db-abc@^0"
+  }
+}
