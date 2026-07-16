@@ -150,10 +150,6 @@ async function getPolicyMode(): Promise<PolicyMode> {
   return "only-me";
 }
 
-async function setPolicyMode(mode: PolicyMode): Promise<void> {
-  await db.setServerConfig("policyMode", mode);
-}
-
 // ── Client attestation key (confidential client) ───────────────────────────
 
 let clientAttestationKey: JoseKey;
@@ -542,9 +538,17 @@ bidderServe.app.get("/api/status", async (c) => {
       .map((c) => ({ vmId: c.vm_id, requesterDid: c.requester_did, requesterHandle: c.requester_handle, status: c.status, createdAt: c.created_at })),
     serveBaseUrl,
     publicOrigin,
-    policyMode: await getPolicyMode(),
+    policyMode: await readBidderPolicyMode(session.did),
   });
 });
+
+async function readBidderPolicyMode(did: string): Promise<string> {
+  try {
+    const keys = await db.listBidderKeys(did);
+    if (keys.length && keys[0].policy_mode) return keys[0].policy_mode;
+  } catch { /* fall through */ }
+  return await getPolicyMode();
+}
 
 bidderServe.app.post("/api/policy", async (c) => {
   const sessionDid = await getSessionDid(c);
@@ -555,8 +559,29 @@ bidderServe.app.post("/api/policy", async (c) => {
   if (!isValidPolicyMode(mode)) {
     return c.json({ error: `Invalid policy mode. Must be one of: ${POLICY_MODES.join(", ")}` }, 400);
   }
-  await setPolicyMode(mode as PolicyMode);
+
+  // Update policy mode on all bidder keys owned by this session DID.
+  // There's one bidder per atproto+DO account pair.
+  const keys = await db.listBidderKeys(sessionDid);
+  for (const key of keys) {
+    await db.updateBidderKeyPolicyMode(key.id, mode);
+  }
   logger.info("policy_mode_changed", { did: sessionDid, policyMode: mode });
+
+  // Restart only this session's bidder(s) so the new policy mode takes effect.
+  const bidders = bidderManager?.getBidders() ?? [];
+  const myBidders = bidders.filter((b) => b.instance.atprotoDid === sessionDid);
+  for (const b of myBidders) {
+    try {
+      await b.restart();
+      logger.info("bidder_restarted_after_policy_change", { bidderKeyId: b.instance.id });
+    } catch (err) {
+      logger.warn("bidder_restart_on_policy_change_failed", {
+        bidderKeyId: b.instance.id, error: String(err),
+      });
+    }
+  }
+
   return c.json({ ok: true, policyMode: mode });
 });
 

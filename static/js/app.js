@@ -207,10 +207,10 @@ function renderPolicyMode(policyMode) {
   if (!el) return;
 
   const modes = [
-    { value: "only-me", label: "Only me", desc: "Only accept RFPs from your own ATProto identity" },
-    { value: "tangled-vouch", label: "Tangled vouch", desc: "Accept RFPs from identities vouched in the tangled network" },
-    { value: "mutuals", label: "Mutuals", desc: "Accept RFPs from mutual ATProto connections" },
-    { value: "dynamic", label: "Dynamic", desc: "Accept RFPs based on dynamic policy evaluation" },
+    { value: "only-me", label: "Only me", desc: "Only bid on RFPs from your own ATProto identity" },
+    { value: "tangled-vouch", label: "Tangled vouch", desc: "Bid on RFPs from identities vouched in the tangled network" },
+    { value: "mutuals", label: "Mutuals", desc: "Bid on RFPs from mutual ATProto connections" },
+    // { value: "dynamic", label: "Dynamic", desc: "Bid on RFPs based on dynamic policy evaluation" },
   ];
 
   el.innerHTML = `

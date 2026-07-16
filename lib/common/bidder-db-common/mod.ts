@@ -34,6 +34,7 @@ export interface BidderKeyRow {
   do_team_uuid: string;
   owner_did: string;
   private_key_hex: string;
+  policy_mode: string;
   created_at: number;
 }
 
@@ -80,6 +81,7 @@ export interface BidderKeyInsert {
   do_team_uuid: string;
   owner_did: string;
   private_key_hex: string;
+  policy_mode?: string;
 }
 
 export interface ContractInsert {
@@ -160,6 +162,7 @@ CREATE INDEX IF NOT EXISTS idx_contracts_created_at ON contracts(created_at DESC
 /** Migration DDL — ALTER statements to upgrade existing DBs. Idempotent. */
 export const MIGRATION_DDL = `
 ALTER TABLE bidder_keys ADD COLUMN IF NOT EXISTS owner_did TEXT NOT NULL DEFAULT '';
+ALTER TABLE bidder_keys ADD COLUMN IF NOT EXISTS policy_mode TEXT NOT NULL DEFAULT 'only-me';
 ALTER TABLE do_tokens ADD COLUMN IF NOT EXISTS owner_did TEXT NOT NULL DEFAULT '';
 ALTER TABLE atproto_sessions ADD COLUMN IF NOT EXISTS _raw_session JSONB;
 CREATE TABLE IF NOT EXISTS server_config (
