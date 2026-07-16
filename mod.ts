@@ -169,7 +169,8 @@ if (storedJwk) {
   await db.setServerConfig("clientAttestationKey", JSON.stringify(clientAttestationKey.privateJwk));
 }
 
-async function computeJwkKid(publicJwk: Record<string, unknown>): Promise<string> {
+// deno-lint-ignore no-explicit-any
+async function computeJwkKid(publicJwk: any): Promise<string> {
   const { kid: _k, kty, crv, x, y, ..._rest } = publicJwk as Record<string, string>;
   const canonical = JSON.stringify({ crv, kty, x, y });
   const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
@@ -256,7 +257,8 @@ const oauthClient = new NodeOAuthClient({
 // ── JWKS endpoint ──────────────────────────────────────────────────────────
 
 bidderServe.app.get("/jwks.json", async (c) => {
-  return c.json({ keys: [clientAttestationKey.publicJwk] });
+  // deno-lint-ignore no-explicit-any
+  return c.json({ keys: [clientAttestationKey.publicJwk as any] });
 });
 
 // ── OAuth client metadata endpoint ─────────────────────────────────────────
@@ -303,7 +305,7 @@ async function getOrCreateBidderManager(): Promise<BidderManager> {
           return { accessToken: row.access_token, refreshToken: row.refresh_token, teamUuid: row.team_uuid, expiresAt: row.expires_at, scope: row.scope };
         },
         async save(t: DOTokenData) {
-          await db.upsertDOToken({ team_uuid: t.teamUuid, access_token: t.accessToken, refresh_token: t.refreshToken, expires_at: t.expiresAt, scope: t.scope });
+          await db.upsertDOToken({ team_uuid: t.teamUuid, access_token: t.accessToken, refresh_token: t.refreshToken, expires_at: t.expiresAt, scope: t.scope, owner_did: token.owner_did });
         },
         async delete() {},
         async listTeams() { return []; },

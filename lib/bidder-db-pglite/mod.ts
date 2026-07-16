@@ -298,7 +298,9 @@ export async function createBidderDbPglite(opts: PGliteDbOptions): Promise<Bidde
       }>(
         `SELECT
            bk.id as bidder_key_id, bk.private_key_hex,
-           a.*, d.*
+           a.*, d.team_uuid, d.access_token, d.refresh_token,
+           d.expires_at, d.scope, d.owner_did,
+           d.created_at as do_created_at, d.refreshed_at as do_refreshed_at
          FROM bidder_keys bk
          JOIN atproto_sessions a ON a.did = bk.atproto_did
          JOIN do_tokens d ON d.team_uuid = bk.do_team_uuid
@@ -330,6 +332,7 @@ export async function createBidderDbPglite(opts: PGliteDbOptions): Promise<Bidde
           refresh_token: row.refresh_token,
           expires_at: row.expires_at,
           scope: row.scope,
+          owner_did: (row as Record<string, unknown>).owner_did as string || "",
           created_at: row.do_created_at,
           refreshed_at: row.do_refreshed_at,
         },

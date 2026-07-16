@@ -267,7 +267,8 @@ export async function createBidderDbPostgres(opts: PostgresDbOptions): Promise<B
            a.dpop_public_jwk, a.dpop_private_jwk, a.pds,
            a.created_at as atp_created_at, a.refreshed_at as atp_refreshed_at,
            d.team_uuid, d.access_token, d.refresh_token,
-           d.expires_at, d.scope, d.created_at as do_created_at, d.refreshed_at as do_refreshed_at
+           d.expires_at, d.scope, d.owner_did,
+           d.created_at as do_created_at, d.refreshed_at as do_refreshed_at
          FROM bidder_keys bk
          JOIN atproto_sessions a ON a.did = bk.atproto_did
          JOIN do_tokens d ON d.team_uuid = bk.do_team_uuid
@@ -299,6 +300,7 @@ export async function createBidderDbPostgres(opts: PostgresDbOptions): Promise<B
           refresh_token: row.refresh_token,
           expires_at: row.expires_at,
           scope: row.scope,
+          owner_did: row.owner_did || "",
           created_at: row.do_created_at,
           refreshed_at: row.do_refreshed_at,
         },
