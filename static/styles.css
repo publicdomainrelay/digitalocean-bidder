@@ -118,31 +118,47 @@ h2 {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
-.dash-grid {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 16px;
-  width: 100%;
-}
-@media (max-width: 640px) {
-  .dash-grid { grid-template-columns: 1fr; }
-}
+.dash-header h1 { margin-bottom: 0; }
 
-/* ── Bidder list ────────────────────────────────────────────────────── */
+/* ── Accounts ───────────────────────────────────────────────────────── */
 
-.bidder-row {
+.account-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
-.bidder-row:last-child { border-bottom: none; }
-.bidder-info { display: flex; flex-direction: column; gap: 2px; }
-.bidder-actions { display: flex; gap: 6px; }
+.account-row:last-child { border-bottom: none; }
+.account-info { display: flex; flex-direction: column; gap: 3px; }
+.account-info strong { font-size: 14px; color: #e2e8f0; }
+.account-meta { display: flex; gap: 16px; margin-top: 2px; }
+.account-actions { display: flex; gap: 6px; align-items: center; }
+
+/* ── Policy Mode ────────────────────────────────────────────────────── */
+
+.policy-select {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.policy-select select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  min-width: 200px;
+}
+.policy-select select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
 
 /* ── VM list ────────────────────────────────────────────────────────── */
 

@@ -52,6 +52,21 @@ export async function fetchContracts(bidderKeyId, cursor) {
   return r.json();
 }
 
+export async function patchPolicyMode(mode) {
+  const r = await fetch(`${BASE}/api/policy`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ policyMode: mode }),
+    credentials: "same-origin",
+  });
+  if (!r.ok) {
+    if (r.status === 401) throw new Error("UNAUTHORIZED");
+    const err = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
 // ── WebSocket for live VM updates ──────────────────────────────────────
 
 export function connectVmStream(onSnapshot, onUpdate, onStatusChange) {

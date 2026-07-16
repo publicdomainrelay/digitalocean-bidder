@@ -138,6 +138,21 @@ async function loadOrCreateSecret(key: string, generate: () => string): Promise<
 
 const sessionSecret = await loadOrCreateSecret("sessionSecret", generateSessionSecret);
 
+// ── Policy mode ────────────────────────────────────────────────────────────
+
+const POLICY_MODES = ["only_me", "direct_network", "policy_based"] as const;
+type PolicyMode = typeof POLICY_MODES[number];
+
+async function getPolicyMode(): Promise<PolicyMode> {
+  const stored = await db.getServerConfig("policyMode");
+  if (stored && POLICY_MODES.includes(stored as PolicyMode)) return stored as PolicyMode;
+  return (options.policyMode as PolicyMode) || "only_me";
+}
+
+async function setPolicyMode(mode: PolicyMode): Promise<void> {
+  await db.setServerConfig("policyMode", mode);
+}
+
 // ── Client attestation key (confidential client) ───────────────────────────
 
 let clientAttestationKey: JoseKey;
@@ -523,7 +538,23 @@ bidderServe.app.get("/api/status", async (c) => {
       .filter((c) => bidders.some((b) => b.instance.id === c.bidder_key_id))
       .map((c) => ({ vmId: c.vm_id, requesterDid: c.requester_did, requesterHandle: c.requester_handle, status: c.status, createdAt: c.created_at })),
     serveBaseUrl,
+    publicOrigin,
+    policyMode: await getPolicyMode(),
   });
+});
+
+bidderServe.app.post("/api/policy", async (c) => {
+  const sessionDid = await getSessionDid(c);
+  if (!sessionDid) return unauth(c);
+  let body: Record<string, unknown> = {};
+  try { body = await c.req.json() as Record<string, unknown>; } catch { /* ignore */ }
+  const mode = body.policyMode as string;
+  if (!mode || !POLICY_MODES.includes(mode as PolicyMode)) {
+    return c.json({ error: `Invalid policy mode. Must be one of: ${POLICY_MODES.join(", ")}` }, 400);
+  }
+  await setPolicyMode(mode as PolicyMode);
+  logger.info("policy_mode_changed", { did: sessionDid, policyMode: mode });
+  return c.json({ ok: true, policyMode: mode });
 });
 
 bidderServe.app.post("/api/bidder/:id/retry", async (c) => {

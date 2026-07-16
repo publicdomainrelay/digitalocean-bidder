@@ -1,6 +1,6 @@
-// Main app logic — login/dashboard screens, status polling, VM stream.
+// Main app logic — login/dashboard screens, status polling, VM stream, policy mode.
 
-import { fetchStatus, startBidder, retryBidder, removeBidder, fetchContracts, connectVmStream } from "./api.js";
+import { fetchStatus, startBidder, retryBidder, removeBidder, fetchContracts, connectVmStream, patchPolicyMode } from "./api.js";
 
 // ── State ──────────────────────────────────────────────────────────────
 
@@ -13,7 +13,9 @@ let state = {
   doConfigured: false,
   bidders: [],
   serveBaseUrl: "",
+  publicOrigin: "",
   activeVms: [],
+  policyMode: null,
 };
 
 let selectedBidderId = null;
@@ -40,13 +42,9 @@ async function poll() {
     const prev = state;
     state = s;
 
-    // Update serve URL
-    if (s.serveBaseUrl) {
-      const el = $("#serve-url");
-      if (el) el.textContent = s.serveBaseUrl;
-      const el2 = $("#serve-url-dash");
-      if (el2) el2.textContent = s.serveBaseUrl;
-    }
+    // Update serve URL in login screen
+    const serveEl = $("#serve-url-login");
+    if (serveEl) serveEl.textContent = (s.publicOrigin || s.serveBaseUrl) || "";
 
     // ATProto status
     if (s.atpReady && !prev.atpReady) showAtpReady(s.atpHandle, s.atpDid);
@@ -57,8 +55,10 @@ async function poll() {
     if (!s.doReady && prev.doReady) showDoPending();
 
     if (!s.doConfigured) {
-      $("#do-actions").classList.add("hidden");
-      $("#do-status").innerHTML = '<span class="badge badge-pending">Not configured</span>';
+      const doActions = $("#do-actions");
+      if (doActions) doActions.classList.add("hidden");
+      const doStatus = $("#do-status");
+      if (doStatus) doStatus.innerHTML = '<span class="badge badge-pending">Not configured</span>';
     }
 
     // Start bidder button
@@ -79,15 +79,27 @@ async function poll() {
 
     // Render dashboard
     if (s.bidders.length > 0) {
-      renderBidders(s.bidders);
+      renderAccounts(s.bidders);
       renderVms(s.activeVms);
+      renderPolicyMode(s.policyMode);
       if (!selectedBidderId && s.bidders.length > 0) {
         selectedBidderId = s.bidders[0].id;
       }
+      // Show policy panel when accounts exist
+      const policyPanel = $("#policy-panel");
+      if (policyPanel) policyPanel.classList.remove("hidden");
     }
+
+    // Public URL in dashboard header
+    const publicUrlEl = $("#public-url-dash");
+    if (publicUrlEl && s.publicOrigin) {
+      publicUrlEl.textContent = s.publicOrigin;
+    } else if (publicUrlEl && s.serveBaseUrl) {
+      publicUrlEl.textContent = s.serveBaseUrl;
+    }
+
   } catch (err) {
     if (err.message === "UNAUTHORIZED") {
-      // Session expired — show login screen
       if (dashboardScreen && !dashboardScreen.classList.contains("hidden")) {
         dashboardScreen.classList.add("hidden");
       }
@@ -132,8 +144,8 @@ function showDoPending() {
 
 // ── Dashboard rendering ───────────────────────────────────────────────
 
-function renderBidders(bidders) {
-  const el = $("#bidders-list");
+function renderAccounts(bidders) {
+  const el = $("#accounts-list");
   if (!el) return;
 
   const badges = {
@@ -144,14 +156,16 @@ function renderBidders(bidders) {
   };
 
   el.innerHTML = bidders.map((b) => `
-    <div class="bidder-row${selectedBidderId === b.id ? ' selected' : ''}" data-id="${b.id}">
-      <div class="bidder-info">
+    <div class="account-row${selectedBidderId === b.id ? ' selected' : ''}" data-id="${b.id}">
+      <div class="account-info">
         <strong>@${esc(b.atprotoHandle)}</strong>
-        <span class="text-muted">DO: ${esc(b.doTeamUuid)}</span>
-        <span class="text-muted">${b.contracts} contracts · ${b.activeVms} active VMs</span>
-        ${b.errorMessage ? `<span class="error">${esc(b.errorMessage)}</span>` : ""}
+        <div class="account-meta">
+          <span class="text-muted">DO: ${esc(b.doTeamUuid)}</span>
+          <span class="text-muted">${b.contracts} contracts &middot; ${b.activeVms} active VMs</span>
+          ${b.errorMessage ? `<span class="error">${esc(b.errorMessage)}</span>` : ""}
+        </div>
       </div>
-      <div class="bidder-actions">
+      <div class="account-actions">
         ${badges[b.status] || badges.stopped}
         ${b.status === "failed"
           ? `<button class="btn btn-sm btn-outline retry-btn" data-id="${b.id}">Retry</button>`
@@ -161,44 +175,67 @@ function renderBidders(bidders) {
     </div>
   `).join("");
 
-  // Click to select
-  el.querySelectorAll(".bidder-row").forEach((row) => {
+  el.querySelectorAll(".account-row").forEach((row) => {
     row.addEventListener("click", () => {
       selectedBidderId = parseInt(row.dataset.id);
-      renderBidders(bidders);
+      renderAccounts(bidders);
       loadContracts(selectedBidderId);
     });
   });
 
-  // Retry button
   el.querySelectorAll(".retry-btn").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       btn.disabled = true;
       btn.textContent = "Retrying…";
-      try {
-        await retryBidder(parseInt(btn.dataset.id));
-      } catch (err) {
-        alert(`Retry failed: ${err.message}`);
-      }
+      try { await retryBidder(parseInt(btn.dataset.id)); } catch (err) { alert(`Retry failed: ${err.message}`); }
       setTimeout(poll, 1000);
     });
   });
 
-  // Remove button
   el.querySelectorAll(".remove-btn").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      if (!confirm("Remove this bidder? Contracts stay in DB.")) return;
-      try {
-        await removeBidder(parseInt(btn.dataset.id));
-        selectedBidderId = null;
-        await poll();
-      } catch (err) {
-        alert(`Remove failed: ${err.message}`);
-      }
+      if (!confirm("Remove this account? Contracts stay in DB.")) return;
+      try { await removeBidder(parseInt(btn.dataset.id)); selectedBidderId = null; await poll(); } catch (err) { alert(`Remove failed: ${err.message}`); }
     });
   });
+}
+
+function renderPolicyMode(policyMode) {
+  const el = $("#policy-selector");
+  if (!el) return;
+
+  const modes = [
+    { value: "only_me", label: "Only me", desc: "Only accept RFPs from your own ATProto identity" },
+    { value: "direct_network", label: "Direct network", desc: "Accept RFPs from identities in your direct ATProto network" },
+    { value: "policy_based", label: "Policy-based", desc: "Accept RFPs based on RBAC allowlist policies" },
+  ];
+
+  el.innerHTML = `
+    <div class="policy-select">
+      <select id="policy-mode-select">
+        ${modes.map((m) => `<option value="${m.value}"${policyMode === m.value ? ' selected' : ''}>${m.label}</option>`).join("")}
+      </select>
+      <span class="text-muted" id="policy-desc">${modes.find((m) => m.value === policyMode)?.desc || modes[0].desc}</span>
+    </div>
+  `;
+
+  const select = $("#policy-mode-select");
+  const desc = $("#policy-desc");
+  if (select) {
+    select.addEventListener("change", async () => {
+      const val = select.value;
+      desc.textContent = modes.find((m) => m.value === val)?.desc || "";
+      try {
+        await patchPolicyMode(val);
+        state.policyMode = val;
+      } catch (err) {
+        alert(`Failed to update policy: ${err.message}`);
+        select.value = state.policyMode || "only_me";
+      }
+    });
+  }
 }
 
 function renderVms(vms) {
@@ -234,7 +271,6 @@ async function loadContracts(bidderKeyId, cursor) {
   const prevBtn = $("#prev-page");
   const nextBtn = $("#next-page");
   const info = $("#page-info");
-
   if (!tbody) return;
 
   try {
@@ -264,13 +300,8 @@ async function loadContracts(bidderKeyId, cursor) {
     if (nextBtn) nextBtn.disabled = !result.cursor;
     if (info) info.textContent = cursor ? "Page" : "Latest";
 
-    // Pagination buttons
-    if (prevBtn) {
-      prevBtn.onclick = () => loadContracts(bidderKeyId, undefined);
-    }
-    if (nextBtn) {
-      nextBtn.onclick = () => loadContracts(bidderKeyId, result.cursor);
-    }
+    if (prevBtn) prevBtn.onclick = () => loadContracts(bidderKeyId, undefined);
+    if (nextBtn) nextBtn.onclick = () => loadContracts(bidderKeyId, result.cursor);
   } catch (err) {
     if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="error">Error: ${esc(err.message)}</td></tr>`;
   }
@@ -282,16 +313,9 @@ let closeVmStream = null;
 
 function startVmStream() {
   if (closeVmStream) closeVmStream();
-
   closeVmStream = connectVmStream(
-    // onSnapshot
-    (vms) => {
-      state.activeVms = vms;
-      renderVms(vms);
-    },
-    // onUpdate
+    (vms) => { state.activeVms = vms; renderVms(vms); },
     (vm) => {
-      // Find and update or add
       const idx = state.activeVms.findIndex((v) => v.vmId === vm.vmId);
       if (idx >= 0) {
         if (vm.eventType === "deleted" || vm.eventType === "completed") {
@@ -300,18 +324,11 @@ function startVmStream() {
           state.activeVms[idx] = { ...state.activeVms[idx], ...vm };
         }
       } else if (vm.eventType === "provisioned") {
-        state.activeVms.push({
-          vmId: vm.vmId,
-          requesterDid: vm.requesterDid,
-          requesterHandle: vm.requesterHandle,
-          status: "active",
-        });
+        state.activeVms.push({ vmId: vm.vmId, requesterDid: vm.requesterDid, requesterHandle: vm.requesterHandle, status: "active" });
       }
       renderVms(state.activeVms);
-      // Refresh contracts
       if (selectedBidderId) loadContracts(selectedBidderId);
     },
-    // onStatusChange
     (status) => {
       const indicator = $("#ws-indicator");
       if (indicator) {
@@ -325,43 +342,30 @@ function startVmStream() {
 // ── Init ───────────────────────────────────────────────────────────────
 
 function init() {
-  // Start bidder button
   const btn = $("#start-bidder-btn");
   if (btn) {
     btn.addEventListener("click", async () => {
       btn.disabled = true;
       btn.textContent = "Starting…";
       const status = $("#start-status");
-      if (status) {
-        status.classList.remove("hidden");
-        status.innerHTML = '<span class="badge badge-starting">Starting bidder…</span>';
-      }
+      if (status) { status.classList.remove("hidden"); status.innerHTML = '<span class="badge badge-starting">Starting bidder…</span>'; }
       try {
         const result = await startBidder();
-        if (status) {
-          status.innerHTML = `<span class="badge badge-active">Bidder started! (ID: ${result.bidderKeyId})</span>`;
-        }
+        if (status) { status.innerHTML = `<span class="badge badge-active">Bidder started! (ID: ${result.bidderKeyId})</span>`; }
         selectedBidderId = result.bidderKeyId;
-        // Poll will switch to dashboard
       } catch (err) {
-        if (status) {
-          status.innerHTML = `<span class="error">Failed: ${esc(err.message)}</span>`;
-        }
+        if (status) { status.innerHTML = `<span class="error">Failed: ${esc(err.message)}</span>`; }
         btn.disabled = false;
         btn.textContent = "Retry";
       }
     });
   }
 
-  // Start polling
   poll();
   pollTimer = setInterval(poll, 3000);
-
-  // Start VM WebSocket
   startVmStream();
 }
 
-// Run on DOM ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
 } else {

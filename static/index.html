@@ -46,7 +46,7 @@
     </div>
 
     <nav class="footer-nav">
-      <span>Serve: <code id="serve-url">—</code></span>
+      <span id="serve-url-login"></span>
     </nav>
   </main>
 
@@ -54,26 +54,30 @@
   <main id="dashboard-screen" class="app-shell hidden">
     <header class="dash-header">
       <h1>&#9889; DigitalOcean Bidder</h1>
-      <span class="text-muted" id="serve-url-dash">—</span>
+      <span class="text-muted" id="public-url-dash">—</span>
     </header>
 
-    <div class="dash-grid">
-      <!-- Bidders panel -->
-      <div class="card" id="bidders-panel">
-        <h2>Account Pairs</h2>
-        <div id="bidders-list"></div>
-      </div>
+    <!-- Accounts -->
+    <div class="card" id="accounts-panel">
+      <h2>Accounts</h2>
+      <div id="accounts-list"></div>
+    </div>
 
-      <!-- VMs panel -->
-      <div class="card" id="vms-panel">
-        <h2>Active VMs <span class="badge badge-active" id="vm-count">0</span></h2>
-        <div id="vms-list">
-          <p class="text-muted">Loading…</p>
-        </div>
+    <!-- Policy Mode -->
+    <div class="card hidden" id="policy-panel">
+      <h2>Policy Mode</h2>
+      <div id="policy-selector"></div>
+    </div>
+
+    <!-- Active VMs -->
+    <div class="card" id="vms-panel">
+      <h2>Active VMs <span class="badge badge-active" id="vm-count">0</span></h2>
+      <div id="vms-list">
+        <p class="text-muted">Loading…</p>
       </div>
     </div>
 
-    <!-- Contracts table -->
+    <!-- Contract History -->
     <div class="card" id="contracts-panel">
       <h2>Contract History</h2>
       <table id="contracts-table">
