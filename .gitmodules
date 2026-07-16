@@ -1,0 +1,3 @@
+[submodule "digitalocean-bidder"]
+	path = digitalocean-bidder
+	url = https://github.com/publicdomainrelay/digitalocean-bidder.git
