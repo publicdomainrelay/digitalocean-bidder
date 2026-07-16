@@ -317,10 +317,10 @@ async function getOrCreateBidderManager(): Promise<BidderManager> {
         logger,
         atproto: opts2.atproto as never,
         serve: opts2.serve as never,
-        getIssuerUrl: () => opts2.ingressUrl,
+        getIssuerUrl: () => opts2.getIngressUrl(),
         digitaloceanBaseUrl: (options.computeProviderDoBaseUrl as string) || "https://api.digitalocean.com",
         doToken: opts2.doToken as never,
-        oidcProvisioner: createOidcProvisioningEnricher(() => opts2.ingressUrl),
+        oidcProvisioner: createOidcProvisioningEnricher(() => opts2.getIngressUrl()),
         rbacProvisioner: createRbacProvisioner(),
         acceptToContract: opts2.acceptToContract as never,
         createSignedRepoRecord: opts2.createSignedRepoRecord as never,
@@ -379,15 +379,17 @@ function createOAuthAgentWrapper(session: OAuthSession): unknown {
       sign: async () => { throw new Error("OAuth agent uses getServiceAuth, not local signing"); },
     },
     async getServiceAuth(aud: string, lxm?: string): Promise<string> {
+      const params = new URLSearchParams({ aud });
+      if (lxm) params.set("lxm", lxm);
       const res = await session.fetchHandler(
-        `${issuer}/xrpc/com.atproto.server.getServiceAuth`,
-        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ aud, lxm: lxm ?? aud }) },
+        `/xrpc/com.atproto.server.getServiceAuth?${params.toString()}`,
+        { method: "GET" },
       );
-      if (!res.ok) throw new Error(`getServiceAuth failed: ${res.status}`);
+      if (!res.ok) throw new Error(`getServiceAuth failed: ${res.status} ${await res.text()}`);
       return ((await res.json()) as { token: string }).token;
     },
     async applyWrites(repo: string, writes: Array<{ action: string; collection: string; rkey: string; record?: unknown }>) {
-      const res = await session.fetchHandler(`${issuer}/xrpc/com.atproto.repo.applyWrites`, {
+      const res = await session.fetchHandler(`/xrpc/com.atproto.repo.applyWrites`, {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ repo, writes: writes.map((w) => ({
           action: w.action, collection: w.collection, rkey: w.rkey,
@@ -400,23 +402,23 @@ function createOAuthAgentWrapper(session: OAuthSession): unknown {
     },
     async getRecord(repo: string, collection: string, rkey: string) {
       const params = new URLSearchParams({ repo, collection, rkey });
-      const res = await session.fetchHandler(`${issuer}/xrpc/com.atproto.repo.getRecord?${params}`);
+      const res = await session.fetchHandler(`/xrpc/com.atproto.repo.getRecord?${params}`);
       if (!res.ok) return null;
       const data = (await res.json()) as { uri: string; cid?: string; value: Record<string, unknown> };
       return { uri: data.uri, cid: data.cid ?? "", value: data.value };
     },
     async createRecord(repo: string, collection: string, rkey: string, record: Record<string, unknown>) {
-      const res = await session.fetchHandler(`${issuer}/xrpc/com.atproto.repo.createRecord`, {
+      const res = await session.fetchHandler(`/xrpc/com.atproto.repo.createRecord`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ repo, collection, rkey, record }),
+        body: JSON.stringify({ repo, collection, rkey, record, validate: false }),
       });
       if (!res.ok) throw new Error(`createRecord failed: ${res.status} ${await res.text()}`);
       return (await res.json()) as { uri: string; cid: string };
     },
     async putRecord(repo: string, collection: string, rkey: string, record: Record<string, unknown>) {
-      const res = await session.fetchHandler(`${issuer}/xrpc/com.atproto.repo.putRecord`, {
+      const res = await session.fetchHandler(`/xrpc/com.atproto.repo.putRecord`, {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ repo, collection, rkey, record }),
+        body: JSON.stringify({ repo, collection, rkey, record, validate: false }),
       });
       if (!res.ok) throw new Error(`putRecord failed: ${res.status} ${await res.text()}`);
       return (await res.json()) as { uri: string; cid: string };
@@ -424,12 +426,15 @@ function createOAuthAgentWrapper(session: OAuthSession): unknown {
     async listRecords(repo: string, collection: string, opts?: { limit?: number }) {
       const all: Array<{ uri: string; cid: string; value: Record<string, unknown> }> = [];
       let cursor: string | undefined;
-      const limit = opts?.limit ?? 100;
+      const limit = Math.min(opts?.limit ?? 100, 100);
       do {
         const params = new URLSearchParams({ repo, collection, limit: String(limit) });
         if (cursor) params.set("cursor", cursor);
-        const res = await session.fetchHandler(`${issuer}/xrpc/com.atproto.repo.listRecords?${params}`);
-        if (!res.ok) break;
+        const res = await session.fetchHandler(`/xrpc/com.atproto.repo.listRecords?${params.toString()}`);
+        if (!res.ok) {
+          console.error("listRecords failed", { status: res.status, collection, error: await res.text().catch(() => "") });
+          break;
+        }
         const data = (await res.json()) as { records: Array<{ uri: string; cid?: string; value: unknown }>; cursor?: string };
         for (const r of data.records) all.push({ uri: r.uri, cid: r.cid ?? "", value: r.value as Record<string, unknown> });
         cursor = data.cursor;

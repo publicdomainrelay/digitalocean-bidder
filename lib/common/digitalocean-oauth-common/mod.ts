@@ -11,8 +11,13 @@ export const DO_ENDPOINTS = {
   account: `${DO_API_BASE}/v2/account`,
 } as const;
 
-/** Default OAuth scope — read+write covers all DO API operations the bidder needs. */
-export const DO_SCOPES = "read write";
+/** Granular OAuth scopes matching the DO API operations the bidder performs.
+ *  - account:read — /v2/account team UUID lookup
+ *  - droplet:read — /v2/droplets list + /v2/droplets/:id IP lookup
+ *  - droplet:create — POST /v2/droplets provision VM
+ *  - droplet:delete — DELETE /v2/droplets/:id destroy VM
+ *  - tag:read, tag:create — droplet tags for OIDC subject binding */
+export const DO_SCOPES = "droplet:read droplet:create droplet:delete account:read tag:create tag:read";
 
 /** Max age of a stored token before proactive refresh (2 minutes). */
 export const DO_TOKEN_REFRESH_THRESHOLD_MS = 120_000;

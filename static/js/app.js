@@ -19,6 +19,7 @@ let state = {
 };
 
 let selectedBidderId = null;
+let policyModeRendered = false;
 
 // ── DOM refs ───────────────────────────────────────────────────────────
 
@@ -81,7 +82,10 @@ async function poll() {
     if (s.bidders.length > 0) {
       renderAccounts(s.bidders);
       renderVms(s.activeVms);
-      renderPolicyMode(s.policyMode);
+      if (!policyModeRendered && s.policyMode) {
+        renderPolicyMode(s.policyMode);
+        policyModeRendered = true;
+      }
       if (!selectedBidderId && s.bidders.length > 0) {
         selectedBidderId = s.bidders[0].id;
       }

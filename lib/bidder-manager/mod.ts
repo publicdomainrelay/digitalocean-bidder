@@ -48,7 +48,8 @@ export interface BidderManagerDeps {
     doToken: string;
     atproto: ComputeAtproto;
     serve: ServeHandle;
-    ingressUrl: string;
+    /** Live getter — relay ingressUrl populated after beginServe/relay-connect. */
+    getIngressUrl: () => string;
     acceptToContract: Map<string, unknown>;
     createSignedRepoRecord: (collection: string, record: Record<string, unknown>) => Promise<{ $type: string; uri: string; cid: string }>;
     callService: (url: string, body: Record<string, unknown>) => Promise<{ status: number; body: unknown }>;
@@ -71,14 +72,8 @@ export interface BidderManagerDeps {
     eventStreams: Record<string, unknown>;
     offeringRefreshMs?: number;
     acceptToContract: Map<string, unknown>;
-    onContractChange?: (event: {
-      type: "provisioned" | "completed" | "cancelled";
-      requesterDid: string;
-      requesterHandle?: string;
-      contractUri: string;
-      rfpUri: string;
-      vmId?: string;
-    }) => void;
+    // deno-lint-ignore no-explicit-any
+    onContractChange?: (event: Record<string, any>) => void;
   }) => Promise<{
     beginServe: () => Promise<void>;
     shutdown: () => void;
@@ -502,24 +497,25 @@ class BidderRefImpl implements BidderRef {
     this.#doTokenHandle = await this.#deps.createDOTokenHandle(this.#doToken);
     const accessToken = await this.#doTokenHandle.resolve();
 
-    // 5. Create serve for provider
+    // 5. Create serve (don't beginServe — MarketBidder.beginServe() handles it).
+    //    DO provider registers onConnected before relay connects, so OIDC issuer
+    //    + JSR registry + /v1/on-network mount when MarketBidder.beginServe() fires.
     const { createServe } = await import("@publicdomainrelay/serve");
     this.#serve = createServe({
       logger: this.#logger,
       relays: this.#ingress ? [this.#ingress] : [],
     });
-    await this.#serve.beginServe();
 
-    const ingressUrl = this.#ingress?.ingressUrl ?? `http://127.0.0.1:${this.#serve.tcpPort}`;
-
-    // 6. Create DO compute provider
+    // 6. Create DO compute provider (registers onConnected callback before relay connects).
+    //    Use live getters — ingressUrl is only populated after beginServe/relay-connect.
     // deno-lint-ignore no-explicit-any
     const atprotoAny = atproto as any;
+    const ingressRef = this.#ingress;
     const doProvider = await this.#deps.createDOProvider({
       doToken: accessToken,
       atproto,
       serve: this.#serve,
-      ingressUrl,
+      getIngressUrl: () => this.#ingress?.ingressUrl ?? "",
       acceptToContract: this.#acceptToContract,
       createSignedRepoRecord: async (collection, record) => {
         const result = await atprotoAny.createSignedRepoRecord(collection, record);
@@ -559,14 +555,8 @@ class BidderRefImpl implements BidderRef {
     const eventStreams = this.#deps.createEventStreams();
 
     // 10. Create MarketBidder
-    const onContractChange = (event: {
-      type: "provisioned" | "completed" | "cancelled";
-      requesterDid: string;
-      requesterHandle?: string;
-      contractUri: string;
-      rfpUri: string;
-      vmId?: string;
-    }) => {
+    // deno-lint-ignore no-explicit-any
+    const onContractChange = (event: Record<string, any>) => {
       this.#onContractChange(event);
     };
 
@@ -637,23 +627,18 @@ class BidderRefImpl implements BidderRef {
     }
   }
 
-  async #onContractChange(event: {
-    type: "provisioned" | "completed" | "cancelled";
-    requesterDid: string;
-    requesterHandle?: string;
-    contractUri: string;
-    rfpUri: string;
-    vmId?: string;
-  }): Promise<void> {
+  // deno-lint-ignore no-explicit-any
+  async #onContractChange(event: Record<string, any>): Promise<void> {
     try {
+      const requesterDid = (event.requesterDid || event.acceptAuthor || "") as string;
       if (event.type === "provisioned") {
         await this.#db.insertContract({
           bidder_key_id: this.instance.id,
-          requester_did: event.requesterDid,
-          requester_handle: event.requesterHandle,
-          contract_uri: event.contractUri,
-          rfp_uri: event.rfpUri,
-          vm_id: event.vmId,
+          requester_did: requesterDid,
+          requester_handle: event.requesterHandle as string | undefined,
+          contract_uri: (event.contractUri || event.receiptUri || "") as string,
+          rfp_uri: (event.rfpUri || "") as string,
+          vm_id: event.vmId as string | undefined,
           status: "active",
           provisioned_at: Date.now(),
         });
@@ -663,10 +648,10 @@ class BidderRefImpl implements BidderRef {
         this.#vmEvents.publish({
           type: "provisioned",
           bidderKeyId: this.instance.id,
-          vmId: event.vmId ?? "",
-          requesterDid: event.requesterDid,
-          requesterHandle: event.requesterHandle,
-          contractUri: event.contractUri,
+          vmId: (event.vmId || event.providerId || "") as string,
+          requesterDid,
+          requesterHandle: event.requesterHandle as string | undefined,
+          contractUri: (event.contractUri || event.receiptUri || "") as string,
           at: Date.now(),
         });
       } else if (event.type === "completed" || event.type === "cancelled") {
