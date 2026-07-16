@@ -49,6 +49,9 @@ export interface BidderManagerDeps {
     atproto: ComputeAtproto;
     serve: ServeHandle;
     ingressUrl: string;
+    acceptToContract: Map<string, unknown>;
+    createSignedRepoRecord: (collection: string, record: Record<string, unknown>) => Promise<{ $type: string; uri: string; cid: string }>;
+    callService: (url: string, body: Record<string, unknown>) => Promise<{ status: number; body: unknown }>;
   }) => Promise<Record<string, unknown>>;
   /** Factory: create an ingress relay for a bidder. */
   createIngress: () => Promise<IngressRef>;
@@ -510,11 +513,22 @@ class BidderRefImpl implements BidderRef {
     const ingressUrl = this.#ingress?.ingressUrl ?? `http://127.0.0.1:${this.#serve.tcpPort}`;
 
     // 6. Create DO compute provider
+    // deno-lint-ignore no-explicit-any
+    const atprotoAny = atproto as any;
     const doProvider = await this.#deps.createDOProvider({
       doToken: accessToken,
       atproto,
       serve: this.#serve,
       ingressUrl,
+      acceptToContract: this.#acceptToContract,
+      createSignedRepoRecord: async (collection, record) => {
+        const result = await atprotoAny.createSignedRepoRecord(collection, record);
+        return { $type: "com.atproto.repo.strongRef", uri: result.uri, cid: result.cid };
+      },
+      callService: async (url, body) => {
+        const result = await atprotoAny.callService(url, "", "", body);
+        return result as { status: number; body: unknown };
+      },
     }) as Record<string, unknown>;
 
     // 7. Wrap provision/destroy with token refresh
