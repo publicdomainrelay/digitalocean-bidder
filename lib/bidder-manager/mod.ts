@@ -475,7 +475,7 @@ class BidderRefImpl implements BidderRef {
     // 0. Read per-bidder policy + args from DB
     const keyRow = await this.#db.getBidderKey(this.instance.id);
     const policy = keyRow?.policy ?? "only-me";
-    const { parsePolicyArgs } = await import("@publicdomainrelay/market-policy-abc");
+    const { parsePolicyArgs } = await import("@publicdomainrelay/policy-engine-cli-options");
     let policyArgs: Record<string, unknown> = {};
     try {
       policyArgs = parsePolicyArgs(keyRow?.policy_args);

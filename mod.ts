@@ -142,8 +142,8 @@ const sessionSecret = await loadOrCreateSecret("sessionSecret", generateSessionS
 
 // ── Policy ─────────────────────────────────────────────────────────────────
 
-import { parsePolicyArgs } from "@publicdomainrelay/market-policy-abc";
-import { policyNames } from "@publicdomainrelay/market-policy-registry";
+import { parsePolicyArgs } from "@publicdomainrelay/policy-engine-cli-options";
+import { policyNames } from "@publicdomainrelay/policy-deno-typescript";
 
 function isKnownPolicy(name: unknown): name is string {
   return typeof name === "string" && policyNames().includes(name);
