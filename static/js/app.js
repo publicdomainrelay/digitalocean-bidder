@@ -1,6 +1,6 @@
 // Main app logic — login/dashboard screens, status polling, VM stream, policy mode.
 
-import { fetchStatus, startBidder, retryBidder, removeBidder, fetchContracts, connectVmStream, patchPolicyMode } from "./api.js";
+import { fetchStatus, startBidder, retryBidder, removeBidder, fetchContracts, connectVmStream, patchPolicy } from "./api.js";
 
 // ── State ──────────────────────────────────────────────────────────────
 
@@ -15,11 +15,11 @@ let state = {
   serveBaseUrl: "",
   publicOrigin: "",
   activeVms: [],
-  policyMode: null,
+  policy: null,
 };
 
 let selectedBidderId = null;
-let policyModeRendered = false;
+let policyRendered = false;
 
 // ── DOM refs ───────────────────────────────────────────────────────────
 
@@ -82,9 +82,9 @@ async function poll() {
     if (s.bidders.length > 0) {
       renderAccounts(s.bidders);
       renderVms(s.activeVms);
-      if (!policyModeRendered && s.policyMode) {
-        renderPolicyMode(s.policyMode);
-        policyModeRendered = true;
+      if (!policyRendered && s.policy) {
+        renderPolicy(s.policy);
+        policyRendered = true;
       }
       if (!selectedBidderId && s.bidders.length > 0) {
         selectedBidderId = s.bidders[0].id;
@@ -206,38 +206,37 @@ function renderAccounts(bidders) {
   });
 }
 
-function renderPolicyMode(policyMode) {
+function renderPolicy(policy) {
   const el = $("#policy-selector");
   if (!el) return;
 
-  const modes = [
+  const policies = [
     { value: "only-me", label: "Only me", desc: "Only bid on RFPs from your own ATProto identity" },
     { value: "tangled-vouch", label: "Tangled vouch", desc: "Bid on RFPs from identities vouched in the tangled network" },
     { value: "mutuals", label: "Mutuals", desc: "Bid on RFPs from mutual ATProto connections" },
-    // { value: "dynamic", label: "Dynamic", desc: "Bid on RFPs based on dynamic policy evaluation" },
   ];
 
   el.innerHTML = `
     <div class="policy-select">
-      <select id="policy-mode-select">
-        ${modes.map((m) => `<option value="${m.value}"${policyMode === m.value ? ' selected' : ''}>${m.label}</option>`).join("")}
+      <select id="policy-select">
+        ${policies.map((p) => `<option value="${p.value}"${policy === p.value ? ' selected' : ''}>${p.label}</option>`).join("")}
       </select>
-      <span class="text-muted" id="policy-desc">${modes.find((m) => m.value === policyMode)?.desc || modes[0].desc}</span>
+      <span class="text-muted" id="policy-desc">${policies.find((p) => p.value === policy)?.desc || policies[0].desc}</span>
     </div>
   `;
 
-  const select = $("#policy-mode-select");
+  const select = $("#policy-select");
   const desc = $("#policy-desc");
   if (select) {
     select.addEventListener("change", async () => {
       const val = select.value;
-      desc.textContent = modes.find((m) => m.value === val)?.desc || "";
+      desc.textContent = policies.find((p) => p.value === val)?.desc || "";
       try {
-        await patchPolicyMode(val);
-        state.policyMode = val;
+        await patchPolicy(val);
+        state.policy = val;
       } catch (err) {
         alert(`Failed to update policy: ${err.message}`);
-        select.value = state.policyMode || "only-me";
+        select.value = state.policy || "only-me";
       }
     });
   }

@@ -76,7 +76,7 @@ export interface BidderDb {
   deleteBidderKey(id: number): Promise<void>;
   listBidderKeys(ownerDid?: string): Promise<BidderKeyRow[]>;
   /** Update policy mode for a specific bidder key. */
-  updateBidderKeyPolicyMode(id: number, policyMode: string): Promise<void>;
+  updateBidderKeyPolicy(id: number, policy: string, policyArgs: string): Promise<void>;
   /** Join with sessions+tokens to get full account pairs, optionally scoped to owner. */
   listActiveAccountPairs(ownerDid?: string): Promise<Array<{
     bidderKeyId: number;

@@ -246,9 +246,9 @@ export async function createBidderDbPglite(opts: PGliteDbOptions): Promise<Bidde
 
     async insertBidderKey(key: BidderKeyInsert) {
       const r = await pg.query<BidderKeyRow>(
-        `INSERT INTO bidder_keys (atproto_did, do_team_uuid, owner_did, private_key_hex, policy_mode, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [key.atproto_did, key.do_team_uuid, key.owner_did, key.private_key_hex, key.policy_mode ?? 'only-me', Date.now()],
+        `INSERT INTO bidder_keys (atproto_did, do_team_uuid, owner_did, private_key_hex, policy, policy_args, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [key.atproto_did, key.do_team_uuid, key.owner_did, key.private_key_hex, key.policy ?? 'only-me', key.policy_args ?? '{}', Date.now()],
       );
       return r.rows[0];
     },
@@ -257,10 +257,10 @@ export async function createBidderDbPglite(opts: PGliteDbOptions): Promise<Bidde
       await pg.query(`DELETE FROM bidder_keys WHERE id = $1`, [id]);
     },
 
-    async updateBidderKeyPolicyMode(id: number, policyMode: string) {
+    async updateBidderKeyPolicy(id: number, policy: string, policyArgs: string) {
       await pg.query(
-        `UPDATE bidder_keys SET policy_mode = $1 WHERE id = $2`,
-        [policyMode, id],
+        `UPDATE bidder_keys SET policy = $1, policy_args = $2 WHERE id = $3`,
+        [policy, policyArgs, id],
       );
     },
 
@@ -286,7 +286,8 @@ export async function createBidderDbPglite(opts: PGliteDbOptions): Promise<Bidde
       const r = await pg.query<{
         bidder_key_id: number;
         private_key_hex: string;
-        policy_mode: string;
+        policy: string;
+        policy_args: string;
         did: string;
         handle: string;
         access_jwt: string;
@@ -305,7 +306,7 @@ export async function createBidderDbPglite(opts: PGliteDbOptions): Promise<Bidde
         do_refreshed_at: number;
       }>(
         `SELECT
-           bk.id as bidder_key_id, bk.private_key_hex, bk.policy_mode,
+           bk.id as bidder_key_id, bk.private_key_hex, bk.policy, bk.policy_args,
            a.*, d.team_uuid, d.access_token, d.refresh_token,
            d.expires_at, d.scope, d.owner_did,
            d.created_at as do_created_at, d.refreshed_at as do_refreshed_at
@@ -319,7 +320,8 @@ export async function createBidderDbPglite(opts: PGliteDbOptions): Promise<Bidde
       return r.rows.map((row) => ({
         bidderKeyId: row.bidder_key_id,
         privateKeyHex: row.private_key_hex,
-        policyMode: row.policy_mode,
+        policy: row.policy,
+        policyArgs: row.policy_args,
         atprotoSession: {
           did: row.did,
           handle: row.handle,

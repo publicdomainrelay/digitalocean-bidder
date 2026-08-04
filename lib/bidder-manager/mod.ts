@@ -472,11 +472,16 @@ class BidderRefImpl implements BidderRef {
   }
 
   async boot(): Promise<void> {
-    // 0. Read per-bidder policy mode from DB
+    // 0. Read per-bidder policy + args from DB
     const keyRow = await this.#db.getBidderKey(this.instance.id);
-    const rawMode = keyRow?.policy_mode ?? "only-me";
-    const { isValidPolicyMode } = await import("@publicdomainrelay/market-policy-abc");
-    const policyMode = isValidPolicyMode(rawMode) ? rawMode : "only-me";
+    const policy = keyRow?.policy ?? "only-me";
+    const { parsePolicyArgs } = await import("@publicdomainrelay/market-policy-abc");
+    let policyArgs: Record<string, unknown> = {};
+    try {
+      policyArgs = parsePolicyArgs(keyRow?.policy_args);
+    } catch {
+      policyArgs = {};
+    }
 
     // 1. Restore OAuth agent
     const { agent } = await this.#deps.createOAuthAgent(this.#atprotoSession);
@@ -578,7 +583,8 @@ class BidderRefImpl implements BidderRef {
       acceptToContract: this.#acceptToContract as any,
       // deno-lint-ignore no-explicit-any
       onContractChange: onContractChange as any,
-      policyMode,
+      policy,
+      policyArgs,
     });
 
     await bidder.beginServe();

@@ -52,11 +52,11 @@ export async function fetchContracts(bidderKeyId, cursor) {
   return r.json();
 }
 
-export async function patchPolicyMode(mode) {
+export async function patchPolicy(policy, policyArgs) {
   const r = await fetch(`${BASE}/api/policy`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ policyMode: mode }),
+    body: JSON.stringify({ policy, policyArgs: policyArgs ?? {} }),
     credentials: "same-origin",
   });
   if (!r.ok) {

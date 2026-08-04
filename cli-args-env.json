@@ -82,7 +82,7 @@
     },
     "db-uri": {
       "type": "string",
-      "description": "PostgreSQL connection string — if set, uses real PG instead of PGlite",
+      "description": "PostgreSQL connection string \u2014 if set, uses real PG instead of PGlite",
       "env": "DATABASE_URI"
     },
     "refresh-interval-sec": {
@@ -138,11 +138,6 @@
       "env": "SERVE_PORT",
       "default": 0
     },
-    "policy-mode": {
-      "type": "string",
-      "description": "Market policy mode for RFP filtering",
-      "env": "POLICY_MODE"
-    },
     "offering-refresh-sec": {
       "type": "number",
       "description": "Offering re-commit interval in seconds",
@@ -160,6 +155,17 @@
       "description": "DigitalOcean API base URL",
       "env": "COMPUTE_PROVIDER_DO_BASE_URL",
       "default": "https://api.digitalocean.com"
+    },
+    "policy": {
+      "type": "string",
+      "description": "Policy name gating which RFPs bidders respond to",
+      "env": "POLICY",
+      "default": "only-me"
+    },
+    "policy-args": {
+      "type": "string",
+      "description": "Policy arguments as JSON, e.g. {\"bidWindowSec\":30,\"firstFree\":true}",
+      "env": "POLICY_ARGS"
     }
   }
 }

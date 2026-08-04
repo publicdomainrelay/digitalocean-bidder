@@ -1,6 +1,8 @@
 {
   "nodeModulesDir": "auto",
-  "unstable": ["kv"],
+  "unstable": [
+    "kv"
+  ],
   "workspace": [
     "./lib/common/digitalocean-oauth-common",
     "./lib/abc/digitalocean-oauth",
@@ -73,9 +75,16 @@
     "@hono/hono/deno": "jsr:@hono/hono/deno",
     "@hono/hono/factory": "jsr:@hono/hono/factory",
     "@libs/qrcode": "jsr:@libs/qrcode@^2",
-    "@std/assert": "jsr:@std/assert@^1.0.19"
+    "@std/assert": "jsr:@std/assert@^1.0.19",
+    "@publicdomainrelay/market-policy-registry": "../atproto-market/lib/market-policy-registry/mod.ts",
+    "@publicdomainrelay/market-policy-only-me": "../atproto-market/lib/market-policy-only-me/mod.ts",
+    "@publicdomainrelay/market-policy-direct-network-tangled-vouch": "../atproto-market/lib/market-policy-direct-network-tangled-vouch/mod.ts",
+    "@publicdomainrelay/market-policy-direct-network-bsky-mutual": "../atproto-market/lib/market-policy-direct-network-bsky-mutual/mod.ts"
   },
   "compile": {
-    "include": ["cli-args-env.json", "config.json"]
+    "include": [
+      "cli-args-env.json",
+      "config.json"
+    ]
   }
 }

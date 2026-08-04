@@ -231,9 +231,9 @@ export async function createBidderDbPostgres(opts: PostgresDbOptions): Promise<B
 
     async insertBidderKey(key: BidderKeyInsert) {
       const rows = await sql.unsafe(
-        `INSERT INTO bidder_keys (atproto_did, do_team_uuid, owner_did, private_key_hex, policy_mode, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [key.atproto_did, key.do_team_uuid, key.owner_did, key.private_key_hex, key.policy_mode ?? 'only-me', Date.now()],
+        `INSERT INTO bidder_keys (atproto_did, do_team_uuid, owner_did, private_key_hex, policy, policy_args, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [key.atproto_did, key.do_team_uuid, key.owner_did, key.private_key_hex, key.policy ?? 'only-me', key.policy_args ?? '{}', Date.now()],
       ) as BidderKeyRow[];
       return rows[0];
     },
@@ -242,10 +242,10 @@ export async function createBidderDbPostgres(opts: PostgresDbOptions): Promise<B
       await sql.unsafe(`DELETE FROM bidder_keys WHERE id = $1`, [id]);
     },
 
-    async updateBidderKeyPolicyMode(id: number, policyMode: string) {
+    async updateBidderKeyPolicy(id: number, policy: string, policyArgs: string) {
       await sql.unsafe(
-        `UPDATE bidder_keys SET policy_mode = $1 WHERE id = $2`,
-        [policyMode, id],
+        `UPDATE bidder_keys SET policy = $1, policy_args = $2 WHERE id = $3`,
+        [policy, policyArgs, id],
       );
     },
 
@@ -269,7 +269,7 @@ export async function createBidderDbPostgres(opts: PostgresDbOptions): Promise<B
       }
       const rows = await sql.unsafe(
         `SELECT
-           bk.id as bidder_key_id, bk.private_key_hex, bk.policy_mode,
+           bk.id as bidder_key_id, bk.private_key_hex, bk.policy, bk.policy_args,
            a.did, a.handle, a.access_jwt, a.refresh_jwt,
            a.dpop_public_jwk, a.dpop_private_jwk, a.pds,
            a.created_at as atp_created_at, a.refreshed_at as atp_refreshed_at,
@@ -286,7 +286,8 @@ export async function createBidderDbPostgres(opts: PostgresDbOptions): Promise<B
       return rows.map((row) => ({
         bidderKeyId: row.bidder_key_id,
         privateKeyHex: row.private_key_hex,
-        policyMode: row.policy_mode,
+        policy: row.policy,
+        policyArgs: row.policy_args,
         atprotoSession: {
           did: row.did,
           handle: row.handle,

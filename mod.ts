@@ -140,15 +140,20 @@ async function loadOrCreateSecret(key: string, generate: () => string): Promise<
 
 const sessionSecret = await loadOrCreateSecret("sessionSecret", generateSessionSecret);
 
-// ── Policy mode ────────────────────────────────────────────────────────────
+// ── Policy ─────────────────────────────────────────────────────────────────
 
-import { isValidPolicyMode, type PolicyMode, POLICY_MODES } from "@publicdomainrelay/market-policy-abc";
+import { parsePolicyArgs } from "@publicdomainrelay/market-policy-abc";
+import { policyNames } from "@publicdomainrelay/market-policy-registry";
 
-async function getPolicyMode(): Promise<PolicyMode> {
-  const stored = await db.getServerConfig("policyMode");
-  if (isValidPolicyMode(stored)) return stored;
-  const fromOpts = options.policyMode as string | undefined;
-  if (isValidPolicyMode(fromOpts)) return fromOpts;
+function isKnownPolicy(name: unknown): name is string {
+  return typeof name === "string" && policyNames().includes(name);
+}
+
+async function getPolicy(): Promise<string> {
+  const stored = await db.getServerConfig("policy");
+  if (isKnownPolicy(stored)) return stored;
+  const fromOpts = options.policy as string | undefined;
+  if (isKnownPolicy(fromOpts)) return fromOpts;
   return "only-me";
 }
 
@@ -550,16 +555,16 @@ bidderServe.app.get("/api/status", async (c) => {
       .map((c) => ({ vmId: c.vm_id, requesterDid: c.requester_did, requesterHandle: c.requester_handle, status: c.status, createdAt: c.created_at })),
     serveBaseUrl,
     publicOrigin,
-    policyMode: await readBidderPolicyMode(session.did),
+    policy: await readBidderPolicy(session.did),
   });
 });
 
-async function readBidderPolicyMode(did: string): Promise<string> {
+async function readBidderPolicy(did: string): Promise<string> {
   try {
     const keys = await db.listBidderKeys(did);
-    if (keys.length && keys[0].policy_mode) return keys[0].policy_mode;
+    if (keys.length && keys[0].policy) return keys[0].policy;
   } catch { /* fall through */ }
-  return await getPolicyMode();
+  return await getPolicy();
 }
 
 bidderServe.app.post("/api/policy", async (c) => {
@@ -567,20 +572,26 @@ bidderServe.app.post("/api/policy", async (c) => {
   if (!sessionDid) return unauth(c);
   let body: Record<string, unknown> = {};
   try { body = await c.req.json() as Record<string, unknown>; } catch { /* ignore */ }
-  const mode = body.policyMode as string;
-  if (!isValidPolicyMode(mode)) {
-    return c.json({ error: `Invalid policy mode. Must be one of: ${POLICY_MODES.join(", ")}` }, 400);
+  const name = body.policy as string;
+  if (!isKnownPolicy(name)) {
+    return c.json({ error: `Invalid policy. Must be one of: ${policyNames().join(", ")}` }, 400);
+  }
+  let policyArgs = "{}";
+  try {
+    policyArgs = JSON.stringify(parsePolicyArgs(body.policyArgs));
+  } catch (err) {
+    return c.json({ error: `Invalid policy args: ${err}` }, 400);
   }
 
   // Update policy mode on all bidder keys owned by this session DID.
   // There's one bidder per atproto+DO account pair.
   const keys = await db.listBidderKeys(sessionDid);
   for (const key of keys) {
-    await db.updateBidderKeyPolicyMode(key.id, mode);
+    await db.updateBidderKeyPolicy(key.id, name, policyArgs);
   }
-  logger.info("policy_mode_changed", { did: sessionDid, policyMode: mode });
+  logger.info("policy_changed", { did: sessionDid, policy: name, policyArgs });
 
-  // Restart only this session's bidder(s) so the new policy mode takes effect.
+  // Restart only this session's bidder(s) so the new policy takes effect.
   const bidders = bidderManager?.getBidders() ?? [];
   const myBidders = bidders.filter((b) => b.instance.atprotoDid === sessionDid);
   for (const b of myBidders) {
@@ -594,7 +605,7 @@ bidderServe.app.post("/api/policy", async (c) => {
     }
   }
 
-  return c.json({ ok: true, policyMode: mode });
+  return c.json({ ok: true, policy: name, policyArgs });
 });
 
 bidderServe.app.post("/api/bidder/:id/retry", async (c) => {
