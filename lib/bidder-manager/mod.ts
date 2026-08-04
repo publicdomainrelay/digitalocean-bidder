@@ -61,6 +61,8 @@ export interface BidderManagerDeps {
     agent: Record<string, unknown>;
     logger: StructuredLoggerInterface;
     plcDirectoryUrl: string;
+    /** Persisted per-account badge.blue attestation key (stable across restarts). */
+    privateKeyHex?: string;
   }) => Promise<Record<string, unknown>>;
   /** Factory: create a MarketBidder instance. */
   createMarketBidder: (opts: {
@@ -486,11 +488,13 @@ class BidderRefImpl implements BidderRef {
     // 1. Restore OAuth agent
     const { agent } = await this.#deps.createOAuthAgent(this.#atprotoSession);
 
-    // 2. Create ATProto wrapper
+    // 2. Create ATProto wrapper — badge.blue signer derives from the persisted
+    //    per-account key (bidder_keys.private_key_hex), not a per-boot ephemeral.
     const atproto = await this.#deps.createATProto({
       agent,
       logger: this.#logger,
       plcDirectoryUrl: this.#deps.plcDirectoryUrl,
+      privateKeyHex: keyRow?.private_key_hex,
     }) as unknown as ComputeAtproto;
 
     // 3. Create ingress relay

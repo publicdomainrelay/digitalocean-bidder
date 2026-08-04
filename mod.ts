@@ -11,7 +11,7 @@ import { createRbacProvisioner } from "@publicdomainrelay/rbac-atproto";
 import { createMarketBidder } from "@publicdomainrelay/market-bidder";
 import { createComputeProviderHooks } from "@publicdomainrelay/market-bidder-compute";
 import { createIngress } from "@publicdomainrelay/did-key-ingress-proxy";
-import { loadOrGenerateKeypair } from "@publicdomainrelay/market-atproto";
+import { createBadgeBlueKeysRecord, loadOrGenerateKeypair } from "@publicdomainrelay/market-atproto";
 import { createPlcDirectoryClient } from "@publicdomainrelay/did-plc";
 import { createDefaultATProtoEventStreamsClient } from "@publicdomainrelay/atproto-event-streams-client";
 import { Secp256k1Keypair } from "@atproto/crypto";
@@ -345,13 +345,29 @@ async function getOrCreateBidderManager(): Promise<BidderManager> {
 
     async createATProto(opts2) {
       const plcClient = createPlcDirectoryClient({ plcDirectoryUrl });
-      const badgeKp = await Secp256k1Keypair.create({ exportable: true });
-      const bytes = await badgeKp.export();
-      const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+      // Badge.blue signer derives from the PERSISTED per-account key (bidder_keys
+      // private_key_hex), stable across restarts — never a per-boot ephemeral.
+      const badgeBlueSigner = await loadOrGenerateKeypair(opts2.privateKeyHex as string | undefined);
+      // Bind the attestation did:key to the account DID via a badgeBlueKeys record
+      // at its deterministic rkey. The account DID document is not bidder-controlled
+      // (BSky-hosted), so the requester's badge.blue binding accepts this key via the
+      // record rather than the DID document.
+      try {
+        const agent = opts2.agent as { did: string; createRecord(did: string, collection: string, rkey: string, record: Record<string, unknown>): Promise<{ uri: string; cid: string }> };
+        await createBadgeBlueKeysRecord({
+          did: agent.did,
+          keyId: badgeBlueSigner.did(),
+          service: "bidder_associate",
+          writeRecord: (repo, collection, rkey, record) => agent.createRecord(repo, collection, rkey, record),
+        });
+        logger.info("badge_blue_key_bound", { did: agent.did, keyId: badgeBlueSigner.did() });
+      } catch (err) {
+        logger.warn("badge_blue_key_bind_failed", { error: String(err) });
+      }
       // deno-lint-ignore no-explicit-any
       return createATProto({
         logger,
-        badgeBlueSigner: await loadOrGenerateKeypair(hex),
+        badgeBlueSigner,
         plcDirectory: plcClient,
         agent: opts2.agent as any,
       }) as any;
