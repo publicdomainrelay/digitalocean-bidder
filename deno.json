@@ -1,7 +1,8 @@
 {
   "nodeModulesDir": "auto",
   "unstable": [
-    "kv"
+    "kv",
+    "worker-options"
   ],
   "workspace": [
     "./lib/common/digitalocean-oauth-common",
