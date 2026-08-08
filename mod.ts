@@ -13,6 +13,7 @@ import { createComputeProviderHooks } from "@publicdomainrelay/market-bidder-com
 import { createIngress } from "@publicdomainrelay/did-key-ingress-proxy";
 import { createBadgeBlueKeysRecord, loadOrGenerateKeypair } from "@publicdomainrelay/market-atproto";
 import { createPlcDirectoryClient } from "@publicdomainrelay/did-plc";
+import { BIDDER_OAUTH_SCOPE } from "@publicdomainrelay/oauth-scope";
 import { createDefaultATProtoEventStreamsClient } from "@publicdomainrelay/atproto-event-streams-client";
 import { Secp256k1Keypair } from "@atproto/crypto";
 import {
@@ -105,28 +106,8 @@ bidderServe.app.get("/", (c) => c.redirect("/index.html"));
 
 // ── OAuth scopes ───────────────────────────────────────────────────────────
 
-const OAUTH_SCOPE_FULL = [
-  "atproto",
-  "repo:com.publicdomainrelay.temp.market.offering?action=create&action=update",
-  "repo:com.publicdomainrelay.temp.auth.allowlist.rbacDid?action=create",
-  "repo:com.publicdomainrelay.temp.market.bids.free?action=create",
-  "repo:com.publicdomainrelay.temp.market.bid?action=create",
-  "repo:com.publicdomainrelay.temp.market.receipt?action=create",
-  "repo:com.publicdomainrelay.temp.market.event?action=create",
-  "repo:com.publicdomainrelay.temp.market.accept?action=create",
-  "repo:com.publicdomainrelay.temp.badgeBlueKeys?action=create",
-  "repo:com.publicdomainrelay.temp.market.bidderAssociation?action=create",
-  "repo:com.publicdomainrelay.temp.compute.config.wif.simple?action=create",
-  "repo:com.publicdomainrelay.temp.compute.vm?action=create",
-  "repo:com.publicdomainrelay.temp.market.rfp?action=create",
-  "repo:com.publicdomainrelay.temp.compute.events.vm.delete?action=create",
-  "repo:com.publicdomainrelay.temp.compute.events.vm.onNetwork?action=create",
-  "repo:com.fedproxy.rbac?action=create",
-  "rpc:com.publicdomainrelay.temp.market.submitRfp?aud=*",
-  "rpc:com.publicdomainrelay.temp.market.submitAccept?aud=*",
-  "rpc:com.publicdomainrelay.temp.market.submitBid?aud=*",
-  "rpc:com.publicdomainrelay.temp.market.submitEvent?aud=*",
-].join(" ");
+// OAuth scope for the bidder role — single source @publicdomainrelay/oauth-scope.
+const OAUTH_SCOPE_FULL = BIDDER_OAUTH_SCOPE.join(" ");
 
 // ── Server secrets ─────────────────────────────────────────────────────────
 
@@ -149,12 +130,33 @@ function isKnownPolicy(name: unknown): name is string {
   return typeof name === "string" && policyNames().includes(name);
 }
 
+// Frontend policy-mode labels are short names; canonical policy names carry a
+// `bidder-` prefix. Map short → canonical so the UI stays bidder-side.
+const POLICY_MODE_SHORTHANDS: Record<string, string> = {
+  "only-me": "bidder-only-me",
+  "tangled-vouch": "bidder-tangled-vouch",
+  "mutuals": "bidder-mutuals",
+};
+
+function canonicalPolicyName(name: unknown): string | undefined {
+  if (typeof name !== "string") return undefined;
+  const canonical = POLICY_MODE_SHORTHANDS[name] ?? name;
+  return isKnownPolicy(canonical) ? canonical : undefined;
+}
+
+function policyModeShorthand(name: string): string {
+  for (const [short, full] of Object.entries(POLICY_MODE_SHORTHANDS)) {
+    if (full === name) return short;
+  }
+  return name;
+}
+
 async function getPolicy(): Promise<string> {
   const stored = await db.getServerConfig("policy");
   if (isKnownPolicy(stored)) return stored;
   const fromOpts = options.policy as string | undefined;
   if (isKnownPolicy(fromOpts)) return fromOpts;
-  return "only-me";
+  return "bidder-only-me";
 }
 
 // ── Client attestation key (confidential client) ───────────────────────────
@@ -571,7 +573,7 @@ bidderServe.app.get("/api/status", async (c) => {
       .map((c) => ({ vmId: c.vm_id, requesterDid: c.requester_did, requesterHandle: c.requester_handle, status: c.status, createdAt: c.created_at })),
     serveBaseUrl,
     publicOrigin,
-    policy: await readBidderPolicy(session.did),
+    policy: policyModeShorthand(await readBidderPolicy(session.did)),
   });
 });
 
@@ -588,8 +590,8 @@ bidderServe.app.post("/api/policy", async (c) => {
   if (!sessionDid) return unauth(c);
   let body: Record<string, unknown> = {};
   try { body = await c.req.json() as Record<string, unknown>; } catch { /* ignore */ }
-  const name = body.policy as string;
-  if (!isKnownPolicy(name)) {
+  const name = canonicalPolicyName(body.policy);
+  if (!name) {
     return c.json({ error: `Invalid policy. Must be one of: ${policyNames().join(", ")}` }, 400);
   }
   let policyArgs = "{}";

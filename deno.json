@@ -51,6 +51,7 @@
     "@publicdomainrelay/market-bidder-compute": "../atproto-market/lib/market-bidder-compute/mod.ts",
     "@publicdomainrelay/market-atproto": "../atproto-market/lib/market-atproto/mod.ts",
     "@publicdomainrelay/market-common": "../atproto-market/lib/common/market-common/mod.ts",
+    "@publicdomainrelay/oauth-scope": "../typescript-helpers/lib/oauth-scope/mod.ts",
     "@publicdomainrelay/market-policy-abc": "../atproto-market/lib/abc/market-policy/mod.ts",
     "@publicdomainrelay/policy-engine-cli-options": "../policy-engine/lib/policy-engine-cli-options/mod.ts",
     "@publicdomainrelay/policy-deno-typescript": "../policy-engine/lib/policies/deno-typescript/mod.ts",
