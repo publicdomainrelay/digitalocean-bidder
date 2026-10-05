@@ -76,7 +76,13 @@ await db.migrate();
 
 const bidderServe = createServe({
   logger,
-  tcp: { addr: (options.serveAddr as string) || "0.0.0.0", port: (options.servePort as number) ?? 0 },
+  tcp: {
+    addr: (options.serveAddr as string) || "0.0.0.0",
+    port: (options.servePort as number) ?? 0,
+    certFile: options.tlsCertFile as string | undefined,
+    keyFile: options.tlsKeyFile as string | undefined,
+  },
+  portFile: options.portFile as string | undefined,
 });
 await bidderServe.beginServe();
 const serveBaseUrl = `http://127.0.0.1:${bidderServe.tcpPort}`;
