@@ -6,7 +6,6 @@ import { EventBus } from "@publicdomainrelay/event-bus";
 import type { AtprotoAgentLike } from "@publicdomainrelay/atproto-helpers";
 import { createATProto } from "@publicdomainrelay/atproto-helpers";
 import { createDigitalOceanComputeProvider } from "@publicdomainrelay/compute-provider-digitalocean";
-import { createOidcProvisioningEnricher } from "@publicdomainrelay/oidc-issuer-hono";
 import { createRbacProvisioner } from "@publicdomainrelay/rbac-atproto";
 import { createMarketBidder } from "@publicdomainrelay/market-bidder";
 import { createComputeProviderHooks } from "@publicdomainrelay/market-bidder-compute";
@@ -333,7 +332,7 @@ async function getOrCreateBidderManager(): Promise<BidderManager> {
         getIssuerUrl: () => opts2.getIngressUrl(),
         digitaloceanBaseUrl: (options.computeProviderDoBaseUrl as string) || "https://api.digitalocean.com",
         doToken: opts2.doToken as never,
-        oidcProvisioner: createOidcProvisioningEnricher(() => opts2.getIngressUrl()),
+        oidcProvisioning: true,
         rbacProvisioner: createRbacProvisioner(),
         acceptToContract: opts2.acceptToContract as never,
         createSignedRepoRecord: opts2.createSignedRepoRecord as never,
